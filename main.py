@@ -1,6 +1,6 @@
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, Update
 from telegram.ext import ContextTypes
-from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, filters
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ConversationHandler, MessageHandler, filters
 from dotenv import load_dotenv
 import os
 
@@ -13,18 +13,19 @@ DGT_1, DGT_2, DGT_3, DGT_4 = range(4)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [
-        [KeyboardButton('1'), KeyboardButton('2'), KeyboardButton('3')],
-        [KeyboardButton('4'), KeyboardButton('5'), KeyboardButton('6')],
-        [KeyboardButton('7'), KeyboardButton('8'), KeyboardButton('9')],
-        [KeyboardButton('0'), KeyboardButton('/cancel')]
+        [InlineKeyboardButton('1', callback_data='1'), InlineKeyboardButton('2', callback_data='2'), InlineKeyboardButton('3', callback_data='3')],
+        [InlineKeyboardButton('4', callback_data='4'), InlineKeyboardButton('5', callback_data='5'), InlineKeyboardButton('6', callback_data='6')],
+        [InlineKeyboardButton('7', callback_data='7'), InlineKeyboardButton('8', callback_data='8'), InlineKeyboardButton('9', callback_data='9')],
+        [InlineKeyboardButton('0', callback_data='0'), InlineKeyboardButton('cancel', callback_data='cancel')]
     ]
-    reply_markup = ReplyKeyboardMarkup(keyboard)
+    reply_markup = InlineKeyboardMarkup(keyboard)
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter a number:", reply_markup=reply_markup)
 
     return DGT_1
 
 async def process_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    number = update.message.text
+    number = update.callback_query.data
+    await update.callback_query.answer(number)
     if isinstance(context.user_data.get('number'), str):
         context.user_data['number'] += number
     else:
@@ -43,11 +44,10 @@ async def process_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             chat_id=update.effective_chat.id,
             message_id=context.user_data["message_id"]
         )
-    
 
     if len(context.user_data['number']) < 4:
         return len(context.user_data['number'])
-    
+
     await context.bot.edit_message_text(
         text=f"Success!",
         chat_id=update.effective_chat.id,
@@ -58,6 +58,7 @@ async def process_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     print("Cancelling.")
+    await update.callback_query.answer("Operation cancelled.")
 
     if context.user_data.get("message_id"):
         await context.bot.edit_message_text(
@@ -71,20 +72,19 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             text="Operation cancelled."
         )
 
+    del context.user_data["number"]
+    del context.user_data["message_id"]
+
     return ConversationHandler.END
 
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
+    states = dict.fromkeys([DGT_1, DGT_2, DGT_3, DGT_4], [CallbackQueryHandler(process_number, pattern='^[0-9]$')])
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
-        states={
-            DGT_1: [MessageHandler(filters.Regex('^[0-9]$'), process_number)],
-            DGT_2: [MessageHandler(filters.Regex('^[0-9]$'), process_number)],
-            DGT_3: [MessageHandler(filters.Regex('^[0-9]$'), process_number)],
-            DGT_4: [MessageHandler(filters.Regex('^[0-9]$'), process_number)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)]
+        states=states,
+        fallbacks=[CallbackQueryHandler(cancel, pattern='cancel')],
     )
     application.add_handler(conv_handler)
 
