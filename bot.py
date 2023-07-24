@@ -1,28 +1,14 @@
-from warnings import filterwarnings
-from telegram.warnings import PTBUserWarning
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, Update
 from telegram.ext import ContextTypes
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ConversationHandler, MessageHandler, filters
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
-
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+from config.configs import *
+from config.keyboards import *
 
 # Conversation states
 DGT_1, DGT_2, DGT_3, DGT_4 = range(4)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    keyboard = [
-        [InlineKeyboardButton('1', callback_data='1'), InlineKeyboardButton('2', callback_data='2'), InlineKeyboardButton('3', callback_data='3')],
-        [InlineKeyboardButton('4', callback_data='4'), InlineKeyboardButton('5', callback_data='5'), InlineKeyboardButton('6', callback_data='6')],
-        [InlineKeyboardButton('7', callback_data='7'), InlineKeyboardButton('8', callback_data='8'), InlineKeyboardButton('9', callback_data='9')],
-        [InlineKeyboardButton('0', callback_data='0'), InlineKeyboardButton('cancel', callback_data='cancel')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    start_msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter a number:", reply_markup=reply_markup)
+    start_msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter a number:", reply_markup=DIGITS_KB)
     context.user_data["start_msg_id"] = start_msg.id
 
     return DGT_1
