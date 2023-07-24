@@ -1,3 +1,5 @@
+from warnings import filterwarnings
+from telegram.warnings import PTBUserWarning
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, Update
 from telegram.ext import ContextTypes
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ConversationHandler, MessageHandler, filters
@@ -5,6 +7,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
+filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
@@ -19,7 +22,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         [InlineKeyboardButton('0', callback_data='0'), InlineKeyboardButton('cancel', callback_data='cancel')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter a number:", reply_markup=reply_markup)
+    start_msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter a number:", reply_markup=reply_markup)
+    context.user_data["start_msg_id"] = start_msg.id
 
     return DGT_1
 
@@ -48,11 +52,22 @@ async def process_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if len(context.user_data['number']) < 4:
         return len(context.user_data['number'])
 
+    # End of converstation
     await context.bot.edit_message_text(
         text=f"Success!",
         chat_id=update.effective_chat.id,
         message_id=context.user_data["message_id"]
     )
+
+    # Now delete a trash left...
+    await context.bot.delete_message(
+        chat_id=update.effective_chat.id,
+        message_id=context.user_data["start_msg_id"]
+    )
+
+    del context.user_data["number"]
+    del context.user_data["message_id"]
+    del context.user_data["start_msg_id"]
 
     return ConversationHandler.END
 
@@ -72,8 +87,15 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             text="Operation cancelled."
         )
 
+    # Now delete a trash left...
+    await context.bot.delete_message(
+        chat_id=update.effective_chat.id,
+        message_id=context.user_data["start_msg_id"]
+    )
+
     del context.user_data["number"]
     del context.user_data["message_id"]
+    del context.user_data["start_msg_id"]
 
     return ConversationHandler.END
 
