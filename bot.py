@@ -4,14 +4,11 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Conv
 from config.configs import *
 from config.keyboards import *
 
-# Conversation states
-DGT_1, DGT_2, DGT_3, DGT_4 = range(4)
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_msg = await context.bot.send_message(chat_id=update.effective_chat.id, text="Please enter a number:", reply_markup=DIGITS_KB)
     context.user_data["start_msg_id"] = start_msg.id
 
-    return DGT_1
+    return 0
 
 async def process_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     number = update.callback_query.data
@@ -89,7 +86,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
-    states = dict.fromkeys([DGT_1, DGT_2, DGT_3, DGT_4], [CallbackQueryHandler(process_number, pattern='^[0-9]$')])
+    states = dict.fromkeys([n for n in range(4)], [CallbackQueryHandler(process_number, pattern='^[0-9]$')])
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
