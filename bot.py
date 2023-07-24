@@ -52,6 +52,8 @@ async def process_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if len(context.user_data['number']) < 4:
         return len(context.user_data['number'])
 
+    # Now you can do any logic with your number via `context.user_data['number']`
+
     # End of converstation
     await context.bot.edit_message_text(
         text=f"Success!",
